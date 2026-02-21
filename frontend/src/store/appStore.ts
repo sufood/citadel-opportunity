@@ -32,7 +32,9 @@ export const useAppStore = create<AppState>((set) => ({
     })),
   clearJob: (jobId) =>
     set((state) => {
-      const { [jobId]: _, ...rest } = state.activeJobs;
+      const rest = Object.fromEntries(
+        Object.entries(state.activeJobs).filter(([key]) => key !== jobId),
+      );
       return { activeJobs: rest };
     }),
 

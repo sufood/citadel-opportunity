@@ -45,9 +45,9 @@ function App() {
     if (scrapeStatus.complete && !scrapeCompletedRef.current) {
       scrapeCompletedRef.current = true;
       if (scrapeStatus.error) {
-        toast.error("Scrape failed", { description: scrapeStatus.error });
+        toast.error("Analysis failed", { description: scrapeStatus.error });
       } else {
-        toast.success("Scrape complete", {
+        toast.success("Analysis complete", {
           description: `Details extracted for ${scrapeStatus.steps.length} steps.`,
         });
         queryClient.invalidateQueries({ queryKey: ["atm-detail", selectedAtmId] });
@@ -80,7 +80,7 @@ function App() {
       {/* Header */}
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
-          <h1 className="text-xl font-semibold mb-3">Tenders Scraper</h1>
+          <h1 className="text-xl font-semibold mb-3">Opportunity Analyser</h1>
           <SearchBar onSearch={handleSearch} isLoading={searchLoading} />
         </div>
       </header>
@@ -104,7 +104,7 @@ function App() {
           {/* Right: Detail + Documents */}
           <div className="lg:col-span-3 space-y-4">
             {scrapeJobId && !scrapeStatus?.complete && (
-              <JobProgress job={scrapeStatus} label="Scrape Progress" />
+              <JobProgress job={scrapeStatus} label="Analysis Progress" />
             )}
 
             <ATMDetailPanel detail={atmDetail} isLoading={detailLoading} />

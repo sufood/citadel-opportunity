@@ -1,13 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { JobStatus } from "@/types/atm";
 
 export function useJobStatus(jobId: string | null) {
-  const [status, setStatus] = useState<JobStatus | null>(null);
+  const [statusMap, setStatusMap] = useState<Record<string, JobStatus>>({});
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     if (!jobId) {
-      setStatus(null);
       return;
     }
 
@@ -17,7 +16,7 @@ export function useJobStatus(jobId: string | null) {
     es.onmessage = (event) => {
       try {
         const data: JobStatus = JSON.parse(event.data);
-        setStatus(data);
+        setStatusMap((prev) => ({ ...prev, [jobId]: data }));
 
         if (data.complete) {
           es.close();
@@ -37,5 +36,5 @@ export function useJobStatus(jobId: string | null) {
     };
   }, [jobId]);
 
-  return status;
+  return useMemo(() => (jobId ? statusMap[jobId] ?? null : null), [jobId, statusMap]);
 }

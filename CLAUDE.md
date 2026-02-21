@@ -1,8 +1,8 @@
-# Tenders Scraper — Claude Code Instructions
+# Opportunity Analyser — Claude Code Instructions
 
 ## Project Overview
 
-An interactive web application that crawls **https://www.tenders.gov.au/Atm** to search for ATM (Approach to Market) tenders by keyword, extract structured details, authenticate, and download associated documents.
+An interactive web application that crawls **https://www.tenders.gov.au/Atm** to search for ATM (Approach to Market) opportunities by keyword, extract structured details, authenticate, and download associated documents.
 
 ### robots.txt compliance
 - `/Atm/*` paths are **allowed** — all target URLs are under this path

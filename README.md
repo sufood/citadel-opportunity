@@ -1,6 +1,6 @@
-# Tenders Scraper
+# Opportunity Analyser
 
-A full-stack web application that searches [tenders.gov.au](https://www.tenders.gov.au/Atm) for Approach to Market (ATM) tenders, extracts structured details via browser automation, and downloads associated documents — all through a clean React UI with real-time progress updates.
+A full-stack web application that searches [tenders.gov.au](https://www.tenders.gov.au/Atm) for Approach to Market (ATM) opportunities, extracts structured details via browser automation, and downloads associated documents — all through a clean React UI with real-time progress updates.
 
 ---
 
@@ -24,7 +24,7 @@ A full-stack web application that searches [tenders.gov.au](https://www.tenders.
 
 ## Key Design Decisions
 
-**Singleton browser context** — Playwright launches one persistent `BrowserContext` at startup and reuses it across all requests. This avoids the 2–3 second cold-start penalty of launching a browser per request and allows session cookies to persist across scrape and download operations.
+**Singleton browser context** — Playwright launches one persistent `BrowserContext` at startup and reuses it across all requests. This avoids the 2–3 second cold-start penalty of launching a browser per request and allows session cookies to persist across analysis and download operations.
 
 **Session persistence** — After authenticating, the browser's cookie/storage state is saved to `tmp/.auth_state.json` and restored on restart. This means the app survives restarts without forcing a re-login.
 
@@ -32,9 +32,9 @@ A full-stack web application that searches [tenders.gov.au](https://www.tenders.
 
 **Offline-first testing** — The extractor is tested against saved HTML snapshots (26 tests), not the live site. This keeps tests fast, deterministic, and network-independent.
 
-**SSE over WebSockets** — Scrape and download jobs stream progress via SSE (`EventSource` on the client). SSE is unidirectional (server→client), needs no handshake upgrade, and works natively through nginx with `proxy_buffering off`.
+**SSE over WebSockets** — Analysis and download jobs stream progress via SSE (`EventSource` on the client). SSE is unidirectional (server→client), needs no handshake upgrade, and works natively through nginx with `proxy_buffering off`.
 
-**Background tasks with in-memory job store** — Long-running scrape/download operations run as FastAPI `BackgroundTask`s. Progress is tracked in an in-memory dict and streamed to the client. This avoids the complexity of Celery/Redis for what is fundamentally a single-user tool.
+**Background tasks with in-memory job store** — Long-running analysis/download operations run as FastAPI `BackgroundTask`s. Progress is tracked in an in-memory dict and streamed to the client. This avoids the complexity of Celery/Redis for what is fundamentally a single-user tool.
 
 ---
 
@@ -118,7 +118,7 @@ This starts:
 - **Backend** on port `8000` — FastAPI + Playwright with Chromium
 - **Frontend** on port `5173` — nginx serving the built React app, proxying API and SSE to the backend
 
-Scraped data persists in `backend/tmp/` via a volume mount.
+Extracted data persists in `backend/tmp/` via a volume mount.
 
 Open [http://localhost:5173](http://localhost:5173).
 
@@ -127,8 +127,8 @@ Open [http://localhost:5173](http://localhost:5173).
 ## Usage
 
 1. **Search** — Enter a keyword (e.g. "software", "cloud") and press Enter
-2. **Scrape** — Click any result row; the app automatically scrapes the full ATM detail page and streams progress via SSE
-3. **View details** — Once scraping completes, the right panel shows all extracted fields: agency, dates, description, conditions, contact info, etc.
+2. **Analyse** — Click any result row; the app automatically extracts the full ATM detail page and streams progress via SSE
+3. **View details** — Once analysis completes, the right panel shows all extracted fields: agency, dates, description, conditions, contact info, etc.
 4. **Download documents** — Click "Download All" in the Documents section to authenticate and download all attached PDFs/documents
 
 ---
@@ -138,10 +138,10 @@ Open [http://localhost:5173](http://localhost:5173).
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/api/health` | Health check |
-| `GET` | `/api/search?keyword={kw}` | Search tenders by keyword |
-| `GET` | `/api/atm` | List all scraped ATM UUIDs |
-| `GET` | `/api/atm/{id}` | Get scraped detail for a specific ATM |
-| `POST` | `/api/atm/{id}/scrape` | Start background scrape job → returns `{job_id}` |
+| `GET` | `/api/search?keyword={kw}` | Search opportunities by keyword |
+| `GET` | `/api/atm` | List all analysed ATM UUIDs |
+| `GET` | `/api/atm/{id}` | Get extracted detail for a specific ATM |
+| `POST` | `/api/atm/{id}/scrape` | Start background analysis job → returns `{job_id}` |
 | `POST` | `/api/atm/{id}/download` | Start background document download → returns `{job_id}` |
 | `GET` | `/api/atm/{id}/files` | List downloaded files for an ATM |
 | `GET` | `/api/jobs/{id}/stream` | SSE stream of job progress |
@@ -157,7 +157,7 @@ cd backend
 python3 -m pytest tests/ -v --asyncio-mode=auto
 ```
 
-57 tests across 5 modules:
+57 tests across 6 modules:
 - `test_storage.py` — File I/O utilities (9 tests)
 - `test_models.py` — Pydantic serialisation roundtrips (7 tests)
 - `test_config.py` — Settings loading and validation (3 tests)

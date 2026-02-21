@@ -93,7 +93,7 @@ export function ATMDetailPanel({ detail, isLoading }: ATMDetailPanelProps) {
     return (
       <Card>
         <CardContent className="py-8 text-center text-muted-foreground">
-          Select a tender and scrape it to view details.
+          Select an opportunity to analyse and view details.
         </CardContent>
       </Card>
     );

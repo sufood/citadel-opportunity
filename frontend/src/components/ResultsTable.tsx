@@ -44,7 +44,7 @@ export function ResultsTable({
   if (!hasSearched && results.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
-        Search for tenders to get started.
+        Search for opportunities to get started.
       </div>
     );
   }

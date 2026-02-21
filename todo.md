@@ -1,4 +1,4 @@
-# Tenders Scraper — TODO
+# Opportunity Analyser — TODO
 
 Progress tracker for Claude Code. Work through tasks in order — each phase depends on the previous.
 

@@ -25,7 +25,7 @@ async def get_atm(atm_id: str) -> ATMDetail:
     """Get scraped ATM details for a given UUID."""
     data = read_json(atm_id, "atm-details.json")
     if not data:
-        raise HTTPException(status_code=404, detail="ATM data not found. Scrape it first.")
+        raise HTTPException(status_code=404, detail="ATM data not found. Analyse it first.")
     return ATMDetail(**data)
 
 
@@ -48,11 +48,11 @@ async def _run_scrape(job_id: str, atm_id: str) -> None:
         detail = await extract_atm_detail(page, atm_id)
 
         update_job(job_id, step=f"Extracted details for {detail.atm_id}")
-        update_job(job_id, step="Scrape complete", complete=True)
+        update_job(job_id, step="Analysis complete", complete=True)
 
-        logger.info("Scrape completed for %s", atm_id)
+        logger.info("Analysis completed for %s", atm_id)
     except Exception as e:
-        logger.exception("Scrape failed for %s", atm_id)
+        logger.exception("Analysis failed for %s", atm_id)
         update_job(job_id, error=str(e))
     finally:
         await page.close()
