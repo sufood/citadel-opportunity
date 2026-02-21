@@ -1,5 +1,6 @@
 import axios from "axios";
 import type { ATMDetail, JobStatus, SearchResult } from "@/types/atm";
+import type { TriageResult } from "@/types/triage";
 
 const api = axios.create({
   baseURL: "/api",
@@ -42,5 +43,21 @@ export async function listFiles(atmId: string): Promise<string[]> {
 
 export async function getJobStatus(jobId: string): Promise<JobStatus> {
   const { data } = await api.get<JobStatus>(`/jobs/${jobId}`);
+  return data;
+}
+
+export async function triageATM(
+  atmId: string
+): Promise<{ job_id: string }> {
+  const { data } = await api.post<{ job_id: string }>(
+    `/atm/${atmId}/triage`
+  );
+  return data;
+}
+
+export async function getTriageResult(
+  atmId: string
+): Promise<TriageResult> {
+  const { data } = await api.get<TriageResult>(`/atm/${atmId}/triage`);
   return data;
 }

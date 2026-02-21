@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
-from app.routers import atm, documents, jobs, search
+from app.routers import atm, documents, jobs, search, triage
 from app.services.browser import BrowserService
 
 logging.basicConfig(
@@ -46,6 +46,7 @@ app.include_router(jobs.router)
 app.include_router(search.router)
 app.include_router(atm.router)
 app.include_router(documents.router)
+app.include_router(triage.router)
 
 # Serve tmp/ as static files for direct file access
 settings = get_settings()

@@ -16,6 +16,8 @@ interface AppState {
   setScrapeJobId: (id: string | null) => void;
   downloadJobId: string | null;
   setDownloadJobId: (id: string | null) => void;
+  triageJobId: string | null;
+  setTriageJobId: (id: string | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -42,4 +44,6 @@ export const useAppStore = create<AppState>((set) => ({
   setScrapeJobId: (id) => set({ scrapeJobId: id }),
   downloadJobId: null,
   setDownloadJobId: (id) => set({ downloadJobId: id }),
+  triageJobId: null,
+  setTriageJobId: (id) => set({ triageJobId: id }),
 }));

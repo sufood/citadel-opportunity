@@ -5,13 +5,14 @@ import { SearchBar } from "@/components/SearchBar";
 import { ResultsTable } from "@/components/ResultsTable";
 import { ATMDetailPanel } from "@/components/ATMDetailPanel";
 import { DocumentList } from "@/components/DocumentList";
+import { TriagePanel } from "@/components/TriagePanel";
 import { JobProgress } from "@/components/JobProgress";
 import { useSearch } from "@/hooks/useSearch";
 import { useATMDetail } from "@/hooks/useATMDetail";
 import { useJobStatus } from "@/hooks/useJobStatus";
 import { useAppStore } from "@/store/appStore";
 import { scrapeATM } from "@/api/client";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 function App() {
   const [keyword, setKeyword] = useState("");
@@ -22,10 +23,15 @@ function App() {
   const setSelectedAtmId = useAppStore((s) => s.setSelectedAtmId);
   const scrapeJobId = useAppStore((s) => s.scrapeJobId);
   const setScrapeJobId = useAppStore((s) => s.setScrapeJobId);
+  const downloadJobId = useAppStore((s) => s.downloadJobId);
+  const setTriageJobId = useAppStore((s) => s.setTriageJobId);
 
   const { data: searchResults, isLoading: searchLoading, error: searchError } = useSearch(keyword);
   const { data: atmDetail, isLoading: detailLoading } = useATMDetail(selectedAtmId);
   const scrapeStatus = useJobStatus(scrapeJobId);
+  const downloadStatus = useJobStatus(downloadJobId);
+
+  const downloadComplete = !!(downloadStatus?.complete && !downloadStatus.error);
 
   // Show search errors
   useEffect(() => {
@@ -59,12 +65,14 @@ function App() {
     setKeyword(kw);
     setSelectedAtmId(null);
     setScrapeJobId(null);
+    setTriageJobId(null);
     scrapeCompletedRef.current = false;
   };
 
   const handleSelect = async (uuid: string) => {
     setSelectedAtmId(uuid);
     setScrapeJobId(null);
+    setTriageJobId(null);
     scrapeCompletedRef.current = false;
 
     try {
@@ -88,17 +96,22 @@ function App() {
       {/* Main content */}
       <main className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          {/* Left: Results */}
-          <div className="lg:col-span-2">
-            <ScrollArea className="h-[calc(100vh-200px)]">
-              <ResultsTable
-                results={searchResults ?? []}
-                selectedId={selectedAtmId}
-                onSelect={handleSelect}
-                isLoading={searchLoading}
-                hasSearched={keyword.length > 0}
+          {/* Left: Results + Triage */}
+          <div className="lg:col-span-2 space-y-4">
+            <ResultsTable
+              results={searchResults ?? []}
+              selectedId={selectedAtmId}
+              onSelect={handleSelect}
+              isLoading={searchLoading}
+              hasSearched={keyword.length > 0}
+            />
+
+            {selectedAtmId && (
+              <TriagePanel
+                atmId={selectedAtmId}
+                downloadComplete={downloadComplete}
               />
-            </ScrollArea>
+            )}
           </div>
 
           {/* Right: Detail + Documents */}
