@@ -122,3 +122,11 @@
     @apply bg-background text-foreground;
     }
 }
+
+@keyframes pulse-hint {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.65 0.22 250 / 0.55); }
+  50%      { box-shadow: 0 0 0 6px oklch(0.65 0.22 250 / 0); }
+}
+.animate-pulse-hint {
+  animation: pulse-hint 2s ease-in-out infinite;
+}

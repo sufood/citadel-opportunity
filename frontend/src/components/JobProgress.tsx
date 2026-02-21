@@ -36,7 +36,7 @@ export function JobProgress({ job, label = "Job Progress" }: JobProgressProps) {
               {i === job.steps.length - 1 && !job.complete ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
               ) : (
-                <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+                <CheckCircle className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
               )}
               <span>{step}</span>
             </li>

@@ -22,6 +22,7 @@ import type { TriageResult } from "@/types/triage";
 interface TriagePanelProps {
   atmId: string | null;
   downloadComplete: boolean;
+  pulse?: boolean;
 }
 
 function ScoreBar({
@@ -45,7 +46,7 @@ function ScoreBar({
       </div>
       <div className="h-2 w-full rounded-full bg-secondary">
         <div
-          className="h-full rounded-full bg-primary transition-all duration-500"
+          className="h-full rounded-full bg-blue-500 dark:bg-blue-400 transition-all duration-500"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -86,11 +87,11 @@ function DisclosureSection({
 function bandColor(band: TriageResult["band"]) {
   switch (band) {
     case "Pursue":
-      return "bg-green-600 text-white";
+      return "bg-green-600 dark:bg-green-500 text-white";
     case "Qualify":
-      return "bg-amber-500 text-white";
+      return "bg-amber-500 dark:bg-amber-400 text-white dark:text-black";
     case "No Bid":
-      return "bg-red-600 text-white";
+      return "bg-red-600 dark:bg-red-500 text-white";
   }
 }
 
@@ -105,7 +106,7 @@ function TriageProcessingState({ steps }: { steps: string[] }) {
               {isCurrent ? (
                 <Loader2 className="h-3.5 w-3.5 mt-0.5 shrink-0 animate-spin text-muted-foreground" />
               ) : (
-                <CheckCircle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-green-600" />
+                <CheckCircle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-green-600 dark:text-green-400" />
               )}
               <span className={isCurrent ? "text-foreground" : "text-muted-foreground"}>
                 {step}
@@ -228,7 +229,7 @@ function TriageResultDisplay({ result }: { result: TriageResult }) {
   );
 }
 
-export function TriagePanel({ atmId, downloadComplete }: TriagePanelProps) {
+export function TriagePanel({ atmId, downloadComplete, pulse }: TriagePanelProps) {
   const triageJobId = useAppStore((s) => s.triageJobId);
   const setTriageJobId = useAppStore((s) => s.setTriageJobId);
   const triageStatus = useJobStatus(triageJobId);
@@ -288,6 +289,7 @@ export function TriagePanel({ atmId, downloadComplete }: TriagePanelProps) {
             variant="outline"
             onClick={handleTriage}
             disabled={!canTriage}
+            className={pulse && !isRunning && !hasResult ? "animate-pulse-hint" : ""}
           >
             {isRunning ? (
               <>

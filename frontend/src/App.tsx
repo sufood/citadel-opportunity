@@ -11,10 +11,12 @@ import { useSearch } from "@/hooks/useSearch";
 import { useATMDetail } from "@/hooks/useATMDetail";
 import { useJobStatus } from "@/hooks/useJobStatus";
 import { useAppStore } from "@/store/appStore";
+import { useTheme } from "@/hooks/useTheme";
 import { scrapeATM } from "@/api/client";
 
 
 function App() {
+  useTheme(); // sync <html> dark class with browser preference
   const [keyword, setKeyword] = useState("");
   const queryClient = useQueryClient();
   const scrapeCompletedRef = useRef(false);
@@ -32,6 +34,12 @@ function App() {
   const downloadStatus = useJobStatus(downloadJobId);
 
   const downloadComplete = !!(downloadStatus?.complete && !downloadStatus.error);
+  const triageJobId = useAppStore((s) => s.triageJobId);
+
+  // Guided hint pulses — only one active at a time
+  const pulseSearch = !keyword && !selectedAtmId;
+  const pulseDownload = !!selectedAtmId && !!atmDetail && !downloadJobId && !downloadComplete;
+  const pulseTriage = downloadComplete && !triageJobId;
 
   // Show search errors
   useEffect(() => {
@@ -89,7 +97,7 @@ function App() {
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
           <h1 className="text-xl font-semibold mb-3">Opportunity Analyser</h1>
-          <SearchBar onSearch={handleSearch} isLoading={searchLoading} />
+          <SearchBar onSearch={handleSearch} isLoading={searchLoading} pulse={pulseSearch} />
         </div>
       </header>
 
@@ -110,6 +118,7 @@ function App() {
               <TriagePanel
                 atmId={selectedAtmId}
                 downloadComplete={downloadComplete}
+                pulse={pulseTriage}
               />
             )}
           </div>
@@ -122,7 +131,7 @@ function App() {
 
             <ATMDetailPanel detail={atmDetail} isLoading={detailLoading} />
 
-            {selectedAtmId && <DocumentList atmId={selectedAtmId} />}
+            {selectedAtmId && <DocumentList atmId={selectedAtmId} pulse={pulseDownload} />}
           </div>
         </div>
       </main>

@@ -9,9 +9,10 @@ import { JobProgress } from "./JobProgress";
 
 interface DocumentListProps {
   atmId: string | null;
+  pulse?: boolean;
 }
 
-export function DocumentList({ atmId }: DocumentListProps) {
+export function DocumentList({ atmId, pulse }: DocumentListProps) {
   const downloadJobId = useAppStore((s) => s.downloadJobId);
   const setDownloadJobId = useAppStore((s) => s.setDownloadJobId);
   const downloadStatus = useJobStatus(downloadJobId);
@@ -46,7 +47,7 @@ export function DocumentList({ atmId }: DocumentListProps) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium">Documents</CardTitle>
-          <Button size="sm" variant="outline" onClick={handleDownload}>
+          <Button size="sm" variant="outline" onClick={handleDownload} className={pulse ? "animate-pulse-hint" : ""}>
             <Download className="h-4 w-4 mr-1" />
             Download All
           </Button>
