@@ -4,6 +4,140 @@ A full-stack web application that searches [tenders.gov.au](https://www.tenders.
 
 ---
 
+## Architecture
+
+### System Context
+
+```mermaid
+graph LR
+    User([User]) --> Frontend
+
+    subgraph Application
+        Frontend["React Frontend<br/><small>Vite + shadcn/ui</small>"]
+        Backend["FastAPI Backend<br/><small>Python 3.12, async</small>"]
+        Frontend -- "REST + SSE<br/>/api/*" --> Backend
+    end
+
+    Backend -- "Playwright<br/>Chromium" --> Tenders["tenders.gov.au<br/><small>AusTender ATM</small>"]
+    Backend -- "Claude API<br/>tool_use" --> Anthropic["Anthropic API<br/><small>Sonnet 4.5</small>"]
+    Backend -- "Read/Write" --> Storage[("tmp/{uuid}/<br/><small>JSON, PDF, DOCX</small>")]
+    Backend -- "Read" --> RefData[("Reference Data<br/><small>services-industries.md<br/>case-studies.md<br/>triage-process.md</small>")]
+```
+
+### Request Flow
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant FE as React Frontend
+    participant API as FastAPI Backend
+    participant Jobs as Job Store (SSE)
+    participant PW as Playwright / Chromium
+    participant ATM as tenders.gov.au
+    participant Disk as tmp/{uuid}/
+    participant Claude as Anthropic Claude API
+
+    Note over User,Claude: 1. Search
+    User->>FE: Enter keyword
+    FE->>API: GET /api/search?keyword=
+    API->>PW: new_page()
+    PW->>ATM: Navigate to /Atm?Keyword=
+    ATM-->>PW: HTML results
+    PW-->>API: SearchResult[]
+    API-->>FE: JSON results
+
+    Note over User,Claude: 2. Analyse
+    User->>FE: Click result row
+    FE->>API: POST /api/atm/{id}/scrape
+    API-->>FE: {job_id}
+    FE->>Jobs: EventSource /api/jobs/{id}/stream
+    API->>PW: Navigate to /Atm/Show/{id}
+    PW->>ATM: GET detail page
+    ATM-->>PW: HTML detail + dataLayer
+    PW-->>API: Parsed ATMDetail
+    API->>Disk: Write atm-details.json, data-layer.json
+    Jobs-->>FE: SSE progress steps
+    FE->>API: GET /api/atm/{id}
+    API->>Disk: Read atm-details.json
+    API-->>FE: ATMDetail JSON
+
+    Note over User,Claude: 3. Download Documents
+    User->>FE: Click "Download All"
+    FE->>API: POST /api/atm/{id}/download
+    API-->>FE: {job_id}
+    FE->>Jobs: EventSource /api/jobs/{id}/stream
+    API->>PW: Authenticate + navigate to /Atm/ViewDocuments/{id}
+    PW->>ATM: Login + enumerate download links
+    loop Each document
+        PW->>ATM: Click download link
+        ATM-->>PW: File stream
+        PW-->>API: Downloaded file
+        API->>Disk: Save PDF/DOCX
+        Jobs-->>FE: SSE "Downloaded filename.pdf"
+    end
+
+    Note over User,Claude: 4. AI Triage
+    User->>FE: Click "Triage This Tender"
+    FE->>API: POST /api/atm/{id}/triage
+    API-->>FE: {job_id}
+    FE->>Jobs: EventSource /api/jobs/{id}/stream
+    API->>Disk: Read all files in tmp/{uuid}/
+    Jobs-->>FE: SSE "Extracting text from RFT.docx"
+    API->>Claude: System prompt + rubric + services + case studies + tender content
+    Jobs-->>FE: SSE "Scoring tender against rubric..."
+    Claude-->>API: tool_use → TriageResult JSON
+    API->>Disk: Write triage-result.json
+    Jobs-->>FE: SSE "Triage complete — 82/100 (Pursue)"
+    FE->>API: GET /api/atm/{id}/triage
+    API-->>FE: TriageResult JSON
+```
+
+### Backend Services
+
+```mermaid
+graph TB
+    subgraph Routers
+        R1["/api/search"]
+        R2["/api/atm/{id}/scrape"]
+        R3["/api/atm/{id}/download"]
+        R4["/api/atm/{id}/triage"]
+        R5["/api/jobs/{id}/stream"]
+    end
+
+    subgraph Services
+        Browser["BrowserService<br/><small>Singleton Playwright context</small>"]
+        Extractor["ExtractorService<br/><small>BS4 HTML parsing</small>"]
+        Downloader["DownloaderService<br/><small>Auth + file download</small>"]
+        Triage["TriageService<br/><small>Doc parsing + Claude API</small>"]
+        Storage["StorageService<br/><small>tmp/ file I/O</small>"]
+    end
+
+    subgraph External
+        ATM["tenders.gov.au"]
+        Claude["Anthropic API"]
+    end
+
+    R1 --> Browser
+    R1 --> Extractor
+    R2 --> Browser
+    R2 --> Extractor
+    R2 --> Storage
+    R3 --> Browser
+    R3 --> Downloader
+    R3 --> Storage
+    R4 --> Triage
+    R4 --> Storage
+    R5 --> JobStore[("In-memory<br/>Job Store")]
+
+    Browser --> ATM
+    Downloader --> Browser
+    Triage --> Claude
+    Triage --> Storage
+    Extractor --> Storage
+```
+
+---
+
 ## Tech Stack
 
 | Layer | Technology | Rationale |
@@ -18,6 +152,8 @@ A full-stack web application that searches [tenders.gov.au](https://www.tenders.
 | **UI state** | Zustand | Minimal boilerplate for cross-component state (selected ATM, active jobs) without prop drilling |
 | **UI components** | shadcn/ui + Tailwind CSS v4 | Unstyled primitives that ship as source code — no runtime dependency, full control over markup |
 | **Real-time updates** | Server-Sent Events (SSE) | One-directional server→client push is all we need for job progress; simpler than WebSockets and works through proxies |
+| **AI scoring** | Anthropic Claude API (Sonnet 4.5) | Structured tool_use output for reliable JSON scoring; evaluates tender documents against capability profile and case studies |
+| **Document parsing** | pdfplumber + python-docx | Extracts text from downloaded PDFs and DOCX files so the AI triage can score against actual tender content |
 | **Containerisation** | Docker + nginx | Multi-stage builds keep images small; nginx handles SPA routing and reverse-proxies API/SSE to the backend |
 
 ---
@@ -36,6 +172,8 @@ A full-stack web application that searches [tenders.gov.au](https://www.tenders.
 
 **Background tasks with in-memory job store** — Long-running analysis/download operations run as FastAPI `BackgroundTask`s. Progress is tracked in an in-memory dict and streamed to the client. This avoids the complexity of Celery/Redis for what is fundamentally a single-user tool.
 
+**AI triage with structured output** — The triage service reads all files in `tmp/{uuid}/` (JSON metadata + downloaded PDFs/DOCX), extracts text, and sends it to Claude alongside Citadel Edge's capability profile and case studies. The Claude API is called with `tool_use` to guarantee a parseable `TriageResult` JSON response. Blocking I/O (document parsing, API call) runs in a thread pool via `run_in_executor` so the event loop stays free for SSE progress delivery.
+
 ---
 
 ## Prerequisites
@@ -43,6 +181,7 @@ A full-stack web application that searches [tenders.gov.au](https://www.tenders.
 - **Python 3.12+**
 - **Node.js 22+** and npm
 - A registered account on [tenders.gov.au](https://www.tenders.gov.au) (for document downloads)
+- An **Anthropic API key** (for AI tender triage)
 
 ---
 
@@ -70,11 +209,13 @@ Edit `backend/.env` with your credentials:
 ```
 TENDERS_USERNAME=your_email@example.com
 TENDERS_PASSWORD=your_password
+ANTHROPIC_API_KEY=sk-ant-...
 TMP_DIR=./tmp
 BROWSER_HEADLESS=true
 ```
 
-Set `BROWSER_HEADLESS=false` to watch the browser during development — useful for debugging selectors and login flow.
+- `ANTHROPIC_API_KEY` is required for the AI tender triage feature (uses Claude Sonnet 4.5)
+- Set `BROWSER_HEADLESS=false` to watch the browser during development — useful for debugging selectors and login flow
 
 ### 3. Set up the frontend
 
@@ -130,6 +271,7 @@ Open [http://localhost:5173](http://localhost:5173).
 2. **Analyse** — Click any result row; the app automatically extracts the full ATM detail page and streams progress via SSE
 3. **View details** — Once analysis completes, the right panel shows all extracted fields: agency, dates, description, conditions, contact info, etc.
 4. **Download documents** — Click "Download All" in the Documents section to authenticate and download all attached PDFs/documents
+5. **Triage** — After documents are downloaded, click "Triage This Tender" to run an AI-powered scoring assessment against Citadel Edge's capability profile, case studies, and a structured rubric. The triage scores the tender across four dimensions (Industry Match, Capability Match, Case Study Evidence, Differentiators) for a total out of 100, assigning a **Pursue** / **Qualify** / **No Bid** band
 
 ---
 
@@ -144,6 +286,8 @@ Open [http://localhost:5173](http://localhost:5173).
 | `POST` | `/api/atm/{id}/scrape` | Start background analysis job → returns `{job_id}` |
 | `POST` | `/api/atm/{id}/download` | Start background document download → returns `{job_id}` |
 | `GET` | `/api/atm/{id}/files` | List downloaded files for an ATM |
+| `POST` | `/api/atm/{id}/triage` | Start AI triage scoring → returns `{job_id}` |
+| `GET` | `/api/atm/{id}/triage` | Get cached triage result |
 | `GET` | `/api/jobs/{id}/stream` | SSE stream of job progress |
 
 Interactive API docs available at [http://localhost:8000/docs](http://localhost:8000/docs) when the backend is running.
@@ -174,24 +318,25 @@ python3 -m pytest tests/ -v --asyncio-mode=auto
 │   ├── app/
 │   │   ├── main.py              # FastAPI app, CORS, lifespan, routers
 │   │   ├── config.py            # pydantic-settings from .env
-│   │   ├── routers/             # search, atm, documents, jobs (SSE)
+│   │   ├── routers/             # search, atm, documents, triage, jobs (SSE)
 │   │   ├── services/
 │   │   │   ├── browser.py       # Singleton Playwright context + login
 │   │   │   ├── extractor.py     # Search + ATM detail parsing
 │   │   │   ├── downloader.py    # Authenticated document downloads
+│   │   │   ├── triage.py        # AI triage scoring (document parsing + Claude API)
 │   │   │   └── storage.py       # tmp/ directory + JSON file I/O
-│   │   └── models/              # Pydantic schemas (ATMDetail, JobStatus)
+│   │   └── models/              # Pydantic schemas (ATMDetail, JobStatus, TriageResult)
 │   ├── tests/                   # 57 tests with HTML fixtures
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
 │   │   ├── components/          # SearchBar, ResultsTable, ATMDetailPanel,
-│   │   │                        # DocumentList, JobProgress + shadcn/ui
+│   │   │                        # DocumentList, TriagePanel, JobProgress + shadcn/ui
 │   │   ├── hooks/               # useSearch, useATMDetail, useJobStatus
 │   │   ├── api/client.ts        # Typed axios wrapper
 │   │   ├── store/appStore.ts    # Zustand state
-│   │   └── types/atm.ts         # TypeScript interfaces
+│   │   └── types/               # TypeScript interfaces (atm.ts, triage.ts)
 │   ├── Dockerfile
 │   ├── nginx.conf
 │   └── package.json
