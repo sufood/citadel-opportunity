@@ -1,5 +1,6 @@
 import logging
 import re
+from urllib.parse import quote_plus
 
 from bs4 import BeautifulSoup
 from playwright.async_api import Page
@@ -23,7 +24,7 @@ async def search_atms(page: Page, keyword: str) -> list[dict]:
     Navigate to the ATM search page and extract result summaries.
     Returns list of {uuid, title, href} dicts.
     """
-    url = f"{BASE_URL}/Atm?filter=published&Keyword={keyword}"
+    url = f"{BASE_URL}/Atm?filter=published&Keyword={quote_plus(keyword)}"
     await page.goto(url)
     await page.wait_for_load_state("networkidle")
 
