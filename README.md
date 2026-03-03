@@ -176,18 +176,98 @@ graph TB
 
 ---
 
-## Prerequisites
+## Quick Start (Docker)
+
+The fastest way to run the application. Requires only **Docker** and **Docker Compose**.
+
+### 1. Configure environment
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+**PowerShell:**
+
+```powershell
+Copy-Item backend/.env.example backend/.env
+```
+
+Edit `backend/.env` with your credentials:
+
+```
+TENDERS_USERNAME=your_email@example.com
+TENDERS_PASSWORD=your_password
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+### 2. Build and run
+
+```bash
+docker compose up --build
+```
+
+**PowerShell:**
+
+```powershell
+docker compose up --build
+```
+
+Open [http://localhost:5173](http://localhost:5173).
+
+This builds a single all-in-one container (frontend build → Python/Playwright + nginx) and exposes it on port `5173`. Nginx serves the React SPA and reverse-proxies `/api` and `/files` requests to uvicorn internally.
+
+Extracted data persists on the host at `backend/tmp/` via a volume mount.
+
+To run in the background:
+
+```bash
+docker compose up --build -d
+```
+
+**PowerShell:**
+
+```powershell
+docker compose up --build -d
+```
+
+To stop:
+
+```bash
+docker compose down
+```
+
+**PowerShell:**
+
+```powershell
+docker compose down
+```
+
+To view logs while running detached:
+
+```bash
+docker compose logs -f
+```
+
+**PowerShell:**
+
+```powershell
+docker compose logs -f
+```
+
+---
+
+## Local Development Setup
+
+Use this when you need hot-reload, debugger access, or want to run the browser in headed mode.
+
+### Prerequisites
 
 - **Python 3.12+**
 - **Node.js 22+** and npm
 - A registered account on [tenders.gov.au](https://www.tenders.gov.au) (for document downloads)
 - An **Anthropic API key** (for AI tender triage)
 
----
-
-## Installation
-
-### 1. Clone and set up the backend
+### 1. Install backend dependencies
 
 ```bash
 cd backend
@@ -234,7 +314,7 @@ BROWSER_HEADLESS=true
 - `ANTHROPIC_API_KEY` is required for the AI tender triage feature (uses Claude Sonnet 4.5)
 - Set `BROWSER_HEADLESS=false` to watch the browser during development — useful for debugging selectors and login flow
 
-### 3. Set up the frontend
+### 3. Install frontend dependencies
 
 ```bash
 cd frontend
@@ -248,11 +328,9 @@ cd frontend
 npm install
 ```
 
----
+### 4. Run the application
 
-## Running (Development)
-
-Start both services — the frontend dev server proxies `/api` requests to the backend automatically.
+Start both services in separate terminals — the Vite dev server proxies `/api` requests to the backend automatically.
 
 **Terminal 1 — Backend:**
 
@@ -288,28 +366,6 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## Running (Docker)
-
-```bash
-docker compose up --build
-```
-
-**PowerShell:**
-
-```powershell
-docker compose up --build
-```
-
-This starts:
-- **Backend** on port `8000` — FastAPI + Playwright with Chromium
-- **Frontend** on port `5173` — nginx serving the built React app, proxying API and SSE to the backend
-
-Extracted data persists in `backend/tmp/` via a volume mount.
-
-Open [http://localhost:5173](http://localhost:5173).
-
----
-
 ## Usage
 
 1. **Search** — Enter a keyword (e.g. "software", "cloud") and press Enter
@@ -335,7 +391,7 @@ Open [http://localhost:5173](http://localhost:5173).
 | `GET` | `/api/atm/{id}/triage` | Get cached triage result |
 | `GET` | `/api/jobs/{id}/stream` | SSE stream of job progress |
 
-Interactive API docs available at [http://localhost:8000/docs](http://localhost:8000/docs) when the backend is running.
+Interactive API docs available at [http://localhost:8000/docs](http://localhost:8000/docs) (local development) or [http://localhost:5173/api/docs](http://localhost:5173/api/docs) (Docker).
 
 ---
 
@@ -366,6 +422,10 @@ python -m pytest tests/ -v --asyncio-mode=auto
 ## Project Structure
 
 ```
+├── Dockerfile                   # All-in-one multi-stage build
+├── docker-compose.yml           # Single-container orchestration
+├── entrypoint.sh                # Starts uvicorn + nginx
+├── nginx.unified.conf           # nginx config for unified container
 ├── backend/
 │   ├── app/
 │   │   ├── main.py              # FastAPI app, CORS, lifespan, routers
@@ -379,7 +439,7 @@ python -m pytest tests/ -v --asyncio-mode=auto
 │   │   │   └── storage.py       # tmp/ directory + JSON file I/O
 │   │   └── models/              # Pydantic schemas (ATMDetail, JobStatus, TriageResult)
 │   ├── tests/                   # 57 tests with HTML fixtures
-│   ├── Dockerfile
+│   ├── Dockerfile               # Standalone backend image (dev)
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
@@ -389,8 +449,7 @@ python -m pytest tests/ -v --asyncio-mode=auto
 │   │   ├── api/client.ts        # Typed axios wrapper
 │   │   ├── store/appStore.ts    # Zustand state
 │   │   └── types/               # TypeScript interfaces (atm.ts, triage.ts)
-│   ├── Dockerfile
-│   ├── nginx.conf
+│   ├── Dockerfile               # Standalone frontend image (dev)
+│   ├── nginx.conf               # nginx config for standalone frontend container
 │   └── package.json
-└── docker-compose.yml
 ```
