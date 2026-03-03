@@ -198,10 +198,27 @@ playwright install chromium
 playwright install-deps
 ```
 
+**PowerShell:**
+
+```powershell
+cd backend
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+playwright install chromium
+playwright install-deps
+```
+
 ### 2. Configure environment
 
 ```bash
 cp .env.example .env
+```
+
+**PowerShell:**
+
+```powershell
+Copy-Item .env.example .env
 ```
 
 Edit `backend/.env` with your credentials:
@@ -224,6 +241,13 @@ cd frontend
 npm install
 ```
 
+**PowerShell:**
+
+```powershell
+cd frontend
+npm install
+```
+
 ---
 
 ## Running (Development)
@@ -238,9 +262,24 @@ source .venv/bin/activate
 python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
+**PowerShell:**
+
+```powershell
+cd backend
+.venv\Scripts\Activate.ps1
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
 **Terminal 2 — Frontend:**
 
 ```bash
+cd frontend
+npm run dev
+```
+
+**PowerShell:**
+
+```powershell
 cd frontend
 npm run dev
 ```
@@ -252,6 +291,12 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 ## Running (Docker)
 
 ```bash
+docker compose up --build
+```
+
+**PowerShell:**
+
+```powershell
 docker compose up --build
 ```
 
@@ -299,6 +344,13 @@ Interactive API docs available at [http://localhost:8000/docs](http://localhost:
 ```bash
 cd backend
 python3 -m pytest tests/ -v --asyncio-mode=auto
+```
+
+**PowerShell:**
+
+```powershell
+cd backend
+python -m pytest tests/ -v --asyncio-mode=auto
 ```
 
 57 tests across 6 modules:
