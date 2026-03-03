@@ -18,6 +18,10 @@ RUN pip install --no-cache-dir -r requirements.txt \
 
 COPY app/ ./app/
 
+# NOTE: Reference data files (citadel-edge-*.md) are NOT included in this
+# standalone image. Use the root Dockerfile / docker-compose.yml instead
+# for full functionality including AI triage.
+
 # Create tmp directory
 RUN mkdir -p /app/tmp
 

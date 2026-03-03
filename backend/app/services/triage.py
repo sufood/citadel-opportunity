@@ -20,8 +20,22 @@ _services_content: str | None = None
 _case_studies_content: str | None = None
 _triage_rubric: str | None = None
 
-# Project root where the reference markdown files live
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+# Project root where the reference markdown files live.
+# Walk up from this file until we find the reference data directory.
+# Works both locally (4 levels up) and in Docker (3 levels up).
+def _find_project_root() -> Path:
+    current = Path(__file__).resolve().parent
+    for _ in range(10):
+        if (current / "citadel-edge-tender-triage-process.md").exists():
+            return current
+        current = current.parent
+    raise FileNotFoundError(
+        "Could not locate reference data (citadel-edge-*.md). "
+        "Ensure reference markdown files are present in the project root."
+    )
+
+
+_PROJECT_ROOT = _find_project_root()
 
 
 def _load_reference_file(filename: str) -> str:
